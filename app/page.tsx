@@ -149,17 +149,25 @@ function isPromoter(feature: Feature) {
   return /promoter|启动子/i.test(feature.name);
 }
 
-function promoterFlagPath(feature: Feature, size: number, radius: number, bandWidth: number, cx: number, cy: number) {
+function promoterArrowPath(feature: Feature, size: number, radius: number, bandWidth: number, cx: number, cy: number) {
   const startAngle = -Math.PI / 2 + (feature.start / size) * Math.PI * 2;
   const direction = feature.strand === -1 ? -1 : 1;
-  const poleOuter = polar(cx, cy, radius + bandWidth / 2 + 6, startAngle);
-  const poleInner = polar(cx, cy, radius + bandWidth / 2 - 2, startAngle);
-  const flagAngle = Math.min(0.13, Math.max(0.055, (bandWidth / radius) * 0.35));
-  const tip = polar(cx, cy, radius + bandWidth / 2 + 6, startAngle + direction * flagAngle);
+  const rIn = radius - bandWidth / 2;
+  const rOut = radius + bandWidth / 2 + 6;
+  const armAngle = Math.min(0.22, Math.max(0.12, bandWidth * 0.006));
+  const tipAngle = Math.min(0.07, Math.max(0.045, bandWidth * 0.0018));
+  const halfW = bandWidth / 2;
+  const stemInner = polar(cx, cy, rIn, startAngle);
+  const stemOuter = polar(cx, cy, rOut, startAngle);
+  const shaftOuter = polar(cx, cy, rOut + halfW, startAngle + direction * armAngle);
+  const tip = polar(cx, cy, rOut, startAngle + direction * (armAngle + tipAngle));
+  const shaftInner = polar(cx, cy, rOut - halfW, startAngle + direction * armAngle);
   return [
-    `M ${poleInner.x.toFixed(2)} ${poleInner.y.toFixed(2)}`,
-    `L ${poleOuter.x.toFixed(2)} ${poleOuter.y.toFixed(2)}`,
+    `M ${stemInner.x.toFixed(2)} ${stemInner.y.toFixed(2)}`,
+    `L ${stemOuter.x.toFixed(2)} ${stemOuter.y.toFixed(2)}`,
+    `L ${shaftOuter.x.toFixed(2)} ${shaftOuter.y.toFixed(2)}`,
     `L ${tip.x.toFixed(2)} ${tip.y.toFixed(2)}`,
+    `L ${shaftInner.x.toFixed(2)} ${shaftInner.y.toFixed(2)}`,
     'Z',
   ].join(' ');
 }
@@ -262,7 +270,7 @@ function PlasmidMap({ data, selectedIds, width, labels }: { data: SequenceData; 
         const innerBoxY = innerLabelPoint.y - labelHeight / 2;
         return <g key={feature.id} data-feature-name={feature.name}>
           <path d={featurePath(feature, data.size, radius, width, cx, cy)} fill={color} stroke="#3C3C3C" strokeWidth="1.35" strokeLinejoin="miter" />
-          {isPromoter(feature) && <path d={promoterFlagPath(feature, data.size, radius, width, cx, cy)} fill={color} stroke="#3C3C3C" strokeWidth="1.35" strokeLinejoin="miter" />}
+          {isPromoter(feature) && <path d={promoterArrowPath(feature, data.size, radius, width, cx, cy)} fill={color} stroke="#3C3C3C" strokeWidth="1.35" strokeLinejoin="miter" />}
           {labels && labelFitsArrow && <text fill={isLightColor(color) ? '#141414' : '#FFFFFF'} fontFamily="Arial" fontSize={Math.max(11, Math.min(16, width * 0.55))} fontWeight="600" dominantBaseline="middle"><textPath href={`#feature-label-arc-${feature.id}`} startOffset="50%" textAnchor="middle">{label}</textPath></text>}
           {labels && !labelFitsArrow && labelInsideRing && <g>
             <path d={`M ${innerFeatureAnchor.x.toFixed(2)} ${innerFeatureAnchor.y.toFixed(2)} L ${innerLabelPoint.x.toFixed(2)} ${innerLabelPoint.y.toFixed(2)}`} fill="none" stroke="#929292" strokeWidth="1.2" />
