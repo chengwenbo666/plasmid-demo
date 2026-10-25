@@ -53,6 +53,7 @@ type WebMcpDocument = Document & {
 };
 
 const FEATURE_COLORS = ['#5B7CFA', '#E07740', '#43A69A', '#A568D5', '#D25875', '#B68B2B', '#4C86B8', '#7B9E44'];
+const PROMOTER_COLOR = '#E07740';
 const TYPE_COLORS: Record<string, string> = {
   CDS: '#5B7CFA', gene: '#5B7CFA', promoter: '#E07740', rep_origin: '#43A69A',
   terminator: '#A568D5', primer_bind: '#D25875', misc_feature: '#B68B2B',
@@ -154,8 +155,8 @@ function promoterArrowPath(feature: Feature, size: number, radius: number, bandW
   const direction = feature.strand === -1 ? -1 : 1;
   const rIn = radius - bandWidth / 2;
   const rOut = radius + bandWidth / 2 + 6;
-  const armAngle = Math.min(0.22, Math.max(0.12, bandWidth * 0.006));
-  const tipAngle = Math.min(0.07, Math.max(0.045, bandWidth * 0.0018));
+  const armAngle = Math.min(0.3, Math.max(0.16, bandWidth * 0.009));
+  const tipAngle = Math.min(0.12, Math.max(0.07, bandWidth * 0.003));
   const halfW = bandWidth / 2;
   const stemInner = polar(cx, cy, rIn, startAngle);
   const stemOuter = polar(cx, cy, rOut, startAngle);
@@ -248,7 +249,7 @@ function PlasmidMap({ data, selectedIds, width, labels }: { data: SequenceData; 
       <circle cx={cx} cy={cy} r={baseRadius} fill="none" stroke="#6A6A6A" strokeWidth="10" />
       {features.map((feature, index) => {
         const radius = baseRadius;
-        const color = normalizeColor(feature.color, TYPE_COLORS[feature.type ?? ''] ?? FEATURE_COLORS[index % FEATURE_COLORS.length]);
+        const color = isPromoter(feature) ? PROMOTER_COLOR : normalizeColor(feature.color, TYPE_COLORS[feature.type ?? ''] ?? FEATURE_COLORS[index % FEATURE_COLORS.length]);
         const span = normalizedSpan(feature.start, feature.end, data.size);
         const midAngle = -Math.PI / 2 + ((feature.start + span / 2) / data.size) * Math.PI * 2;
         const arcLength = (span / data.size) * Math.PI * 2 * radius;
@@ -462,7 +463,7 @@ export default function Home() {
       <div className="grid gap-5 xl:grid-cols-[290px_minmax(0,1fr)_285px]">
         <aside className="order-2 rounded-2xl border border-[#DCE8E5] bg-white p-5 shadow-[0_10px_30px_rgba(35,74,68,0.05)] xl:order-1"><div className="flex items-center justify-between border-b border-[#E5EFEC] pb-4"><div><h2 className="font-bold">示意图设置</h2><p className="mt-0.5 text-xs text-[#728887]">先缩小，再调宽度</p></div><CircleHelp className="size-4 text-[#8AA09E]" aria-label="箭头环带宽度指 feature 色块沿半径方向的实际宽度" /></div><div className="mt-6"><div className="flex items-baseline justify-between"><label className="text-sm font-semibold">箭头环带宽度</label><output className="rounded-md bg-[#E7F4F0] px-2 py-0.5 text-xs font-bold text-[#277269]">{bandWidth}px</output></div><Slider className="mt-4" min={14} max={54} step={1} value={[bandWidth]} onValueChange={(value) => setBandWidth(Array.isArray(value) ? value[0] : value)} aria-label="箭头环带宽度" /><div className="mt-2 flex justify-between text-[11px] text-[#8A9D9B]"><span>细</span><span>适合小图</span><span>宽</span></div></div><div className="mt-6 flex items-center justify-between rounded-xl bg-[#F2F7F5] px-3.5 py-3"><div><p className="text-sm font-semibold">显示 feature 标签</p><p className="mt-0.5 text-xs text-[#728887]">短 feature 使用注释框</p></div><Switch checked={showLabels} onCheckedChange={setShowLabels} aria-label="显示 feature 标签" /></div><div className="mt-7 rounded-xl border border-[#D7E8E3] bg-[#F4FAF8] p-3.5"><div className="flex gap-2"><Info className="mt-0.5 size-4 shrink-0 text-[#338175]" /><p className="text-xs leading-5 text-[#547573]">导出的 SVG 是重新生成的矢量图：箭头带宽由这里控制，不受 SnapGene 默认箭头比例限制。</p></div></div></aside>
         <div className="order-1 min-h-[520px] rounded-2xl border border-[#DCE8E5] bg-[radial-gradient(circle_at_50%_42%,#FFFFFF_0%,#F7FBF9_70%,#EDF5F1_100%)] p-5 shadow-[0_10px_30px_rgba(35,74,68,0.05)] xl:order-2"><div className="mb-3 flex items-center justify-between"><p className="text-xs font-bold tracking-[0.1em] text-[#6D8885]">SVG PREVIEW</p><p className="text-xs text-[#78908D]">透明背景 · 可编辑</p></div><div className="mx-auto h-[min(68vh,680px)] min-h-[440px] max-w-[720px]"><PlasmidMap data={data} selectedIds={selectedIds} width={bandWidth} labels={showLabels} /></div></div>
-        <aside className="order-3 rounded-2xl border border-[#DCE8E5] bg-white p-5 shadow-[0_10px_30px_rgba(35,74,68,0.05)]"><div className="flex items-end justify-between border-b border-[#E5EFEC] pb-4"><div><h2 className="font-bold">保留的元件</h2><p className="mt-0.5 text-xs text-[#728887]">点击精简图谱</p></div><button type="button" className="text-xs font-semibold text-[#28776D]" onClick={() => setSelectedIds(new Set(data.features.map((feature) => feature.id)))}>全部显示</button></div><div className="mt-2 max-h-[430px] space-y-1 overflow-y-auto pr-1">{data.features.map((feature, index) => { const active = selectedIds.has(feature.id); const color = normalizeColor(feature.color, TYPE_COLORS[feature.type ?? ''] ?? FEATURE_COLORS[index % FEATURE_COLORS.length]); return <button key={feature.id} type="button" onClick={() => toggleFeature(feature.id)} className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition ${active ? 'bg-[#F0F8F5]' : 'opacity-45 hover:bg-[#F6F8F7]'}`} aria-pressed={active}><span className="size-3 shrink-0 rounded-sm" style={{ background: color }} /><span className="min-w-0 flex-1 truncate text-sm font-medium">{feature.name}</span>{active ? <span className="text-xs font-bold text-[#278171]">保留</span> : <X className="size-3.5 text-[#829795]" />}</button>; })}</div><p className="mt-4 border-t border-[#E5EFEC] pt-4 text-xs leading-5 text-[#78908D]">建议小尺寸主图保留 4–8 个核心 feature；完整构建信息可放在补充材料。</p></aside>
+        <aside className="order-3 rounded-2xl border border-[#DCE8E5] bg-white p-5 shadow-[0_10px_30px_rgba(35,74,68,0.05)]"><div className="flex items-end justify-between border-b border-[#E5EFEC] pb-4"><div><h2 className="font-bold">保留的元件</h2><p className="mt-0.5 text-xs text-[#728887]">点击精简图谱</p></div><button type="button" className="text-xs font-semibold text-[#28776D]" onClick={() => setSelectedIds(new Set(data.features.map((feature) => feature.id)))}>全部显示</button></div><div className="mt-2 max-h-[430px] space-y-1 overflow-y-auto pr-1">{data.features.map((feature, index) => { const active = selectedIds.has(feature.id); const color = isPromoter(feature) ? PROMOTER_COLOR : normalizeColor(feature.color, TYPE_COLORS[feature.type ?? ''] ?? FEATURE_COLORS[index % FEATURE_COLORS.length]); return <button key={feature.id} type="button" onClick={() => toggleFeature(feature.id)} className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition ${active ? 'bg-[#F0F8F5]' : 'opacity-45 hover:bg-[#F6F8F7]'}`} aria-pressed={active}><span className="size-3 shrink-0 rounded-sm" style={{ background: color }} /><span className="min-w-0 flex-1 truncate text-sm font-medium">{feature.name}</span>{active ? <span className="text-xs font-bold text-[#278171]">保留</span> : <X className="size-3.5 text-[#829795]" />}</button>; })}</div><p className="mt-4 border-t border-[#E5EFEC] pt-4 text-xs leading-5 text-[#78908D]">建议小尺寸主图保留 4–8 个核心 feature；完整构建信息可放在补充材料。</p></aside>
       </div>
     </section>}
     <footer className="border-t border-[#E0EAE6] px-5 py-5 text-center text-xs text-[#78908D]">文件仅在当前浏览器内存中处理。关闭页面后不会保留序列或注释。</footer>
