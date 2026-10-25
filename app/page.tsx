@@ -145,10 +145,29 @@ function hasArrowHead(feature: Feature, size: number) {
   return span >= 0.14 && !['rep_origin', 'origin', 'misc_feature', 'primer_bind', 'terminator'].includes(type);
 }
 
+function isPromoter(feature: Feature) {
+  return /promoter|启动子/i.test(feature.name);
+}
+
+function promoterFlagPath(feature: Feature, size: number, radius: number, bandWidth: number, cx: number, cy: number) {
+  const startAngle = -Math.PI / 2 + (feature.start / size) * Math.PI * 2;
+  const direction = feature.strand === -1 ? -1 : 1;
+  const poleOuter = polar(cx, cy, radius + bandWidth / 2 + 6, startAngle);
+  const poleInner = polar(cx, cy, radius + bandWidth / 2 - 2, startAngle);
+  const flagAngle = Math.min(0.13, Math.max(0.055, (bandWidth / radius) * 0.35));
+  const tip = polar(cx, cy, radius + bandWidth / 2 + 6, startAngle + direction * flagAngle);
+  return [
+    `M ${poleInner.x.toFixed(2)} ${poleInner.y.toFixed(2)}`,
+    `L ${poleOuter.x.toFixed(2)} ${poleOuter.y.toFixed(2)}`,
+    `L ${tip.x.toFixed(2)} ${tip.y.toFixed(2)}`,
+    'Z',
+  ].join(' ');
+}
+
 function featurePath(feature: Feature, size: number, radius: number, bandWidth: number, cx: number, cy: number) {
   const startAngle = -Math.PI / 2 + (feature.start / size) * Math.PI * 2;
   const span = Math.max((normalizedSpan(feature.start, feature.end, size) / size) * Math.PI * 2, 0.028);
-  if (!hasArrowHead(feature, size)) return featureBandPath(feature, size, radius, bandWidth, cx, cy);
+  if (isPromoter(feature) || !hasArrowHead(feature, size)) return featureBandPath(feature, size, radius, bandWidth, cx, cy);
   const direction = feature.strand === -1 ? -1 : 1;
   const sweep = direction === 1 ? 1 : 0;
   const outerRadius = radius + bandWidth / 2;
@@ -243,6 +262,7 @@ function PlasmidMap({ data, selectedIds, width, labels }: { data: SequenceData; 
         const innerBoxY = innerLabelPoint.y - labelHeight / 2;
         return <g key={feature.id} data-feature-name={feature.name}>
           <path d={featurePath(feature, data.size, radius, width, cx, cy)} fill={color} stroke="#3C3C3C" strokeWidth="1.35" strokeLinejoin="miter" />
+          {isPromoter(feature) && <path d={promoterFlagPath(feature, data.size, radius, width, cx, cy)} fill={color} stroke="#3C3C3C" strokeWidth="1.35" strokeLinejoin="miter" />}
           {labels && labelFitsArrow && <text fill={isLightColor(color) ? '#141414' : '#FFFFFF'} fontFamily="Arial" fontSize={Math.max(11, Math.min(16, width * 0.55))} fontWeight="600" dominantBaseline="middle"><textPath href={`#feature-label-arc-${feature.id}`} startOffset="50%" textAnchor="middle">{label}</textPath></text>}
           {labels && !labelFitsArrow && labelInsideRing && <g>
             <path d={`M ${innerFeatureAnchor.x.toFixed(2)} ${innerFeatureAnchor.y.toFixed(2)} L ${innerLabelPoint.x.toFixed(2)} ${innerLabelPoint.y.toFixed(2)}`} fill="none" stroke="#929292" strokeWidth="1.2" />
