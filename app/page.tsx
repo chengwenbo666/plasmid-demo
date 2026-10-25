@@ -143,7 +143,7 @@ function featureBandPath(feature: Feature, size: number, radius: number, bandWid
 function hasArrowHead(feature: Feature, size: number) {
   const span = (normalizedSpan(feature.start, feature.end, size) / size) * Math.PI * 2;
   const type = feature.type?.toLowerCase() ?? '';
-  return span >= 0.14 && !['rep_origin', 'origin', 'misc_feature', 'primer_bind', 'terminator'].includes(type);
+  return span >= 0.10 && !['rep_origin', 'origin', 'misc_feature', 'primer_bind', 'terminator'].includes(type);
 }
 
 function isPromoter(feature: Feature) {
@@ -153,16 +153,11 @@ function isPromoter(feature: Feature) {
 function promoterArrowPath(feature: Feature, size: number, radius: number, bandWidth: number, cx: number, cy: number) {
   const startAngle = -Math.PI / 2 + (feature.start / size) * Math.PI * 2;
   const direction = feature.strand === -1 ? -1 : 1;
-  const rIn = radius - bandWidth / 2;
-  const rOut = radius + bandWidth / 2 + 6;
-  const armAngle = Math.min(0.3, Math.max(0.16, bandWidth * 0.009));
-  const tipAngle = Math.min(0.12, Math.max(0.07, bandWidth * 0.003));
-  const halfW = bandWidth / 2;
-  const stemInner = polar(cx, cy, rIn, startAngle);
-  const stemOuter = polar(cx, cy, rOut, startAngle);
-  const shaftOuter = polar(cx, cy, rOut + halfW, startAngle + direction * armAngle);
-  const tip = polar(cx, cy, rOut, startAngle + direction * (armAngle + tipAngle));
-  const shaftInner = polar(cx, cy, rOut - halfW, startAngle + direction * armAngle);
+  const stemInner = polar(cx, cy, radius + bandWidth / 2, startAngle);
+  const stemOuter = polar(cx, cy, radius + bandWidth / 2 + 18, startAngle);
+  const shaftOuter = polar(cx, cy, radius + bandWidth / 2 + 18, startAngle + direction * 0.10);
+  const tip = polar(cx, cy, radius + bandWidth / 2 + 18, startAngle + direction * 0.22);
+  const shaftInner = polar(cx, cy, radius + bandWidth / 2 + 14, startAngle + direction * 0.10);
   return [
     `M ${stemInner.x.toFixed(2)} ${stemInner.y.toFixed(2)}`,
     `L ${stemOuter.x.toFixed(2)} ${stemOuter.y.toFixed(2)}`,
@@ -176,19 +171,19 @@ function promoterArrowPath(feature: Feature, size: number, radius: number, bandW
 function featurePath(feature: Feature, size: number, radius: number, bandWidth: number, cx: number, cy: number) {
   const startAngle = -Math.PI / 2 + (feature.start / size) * Math.PI * 2;
   const span = Math.max((normalizedSpan(feature.start, feature.end, size) / size) * Math.PI * 2, 0.028);
-  if (isPromoter(feature) || !hasArrowHead(feature, size)) return featureBandPath(feature, size, radius, bandWidth, cx, cy);
+  if (!hasArrowHead(feature, size)) return featureBandPath(feature, size, radius, bandWidth, cx, cy);
   const direction = feature.strand === -1 ? -1 : 1;
   const sweep = direction === 1 ? 1 : 0;
   const outerRadius = radius + bandWidth / 2;
   const innerRadius = radius - bandWidth / 2;
   // A single, conventional triangular arrowhead pointing along the feature direction.
-  const headAngle = Math.min(span * 0.58, Math.min(0.18, Math.max(0.04, span * 0.32)));
+  const headAngle = Math.min(span * 0.64, Math.min(0.24, Math.max(0.07, span * 0.38)));
   const bodySpan = Math.max(0.003, span - headAngle);
   const arrowStart = direction === 1 ? startAngle : startAngle + span;
   const outerStart = polar(cx, cy, outerRadius, arrowStart);
   const outerBodyEnd = polar(cx, cy, outerRadius, arrowStart + direction * bodySpan);
   const headBaseAngle = arrowStart + direction * bodySpan;
-  const headExtra = Math.min(9, bandWidth * 0.38);
+  const headExtra = Math.min(14, bandWidth * 0.52);
   const outerHeadBase = polar(cx, cy, outerRadius + headExtra, headBaseAngle);
   const tip = polar(cx, cy, radius, arrowStart + direction * span);
   const innerHeadBase = polar(cx, cy, innerRadius - headExtra, headBaseAngle);
@@ -214,7 +209,7 @@ function displayName(feature: Feature) {
   return feature.name;
 }
 
-function PlasmidMap({ data, selectedIds, width, labels }: { data: SequenceData; selectedIds: Set<string>; width: number; labels: boolean }) {
+function PlasmidMap({ data, selectedIds, width, fontSize, labels }: { data: SequenceData; selectedIds: Set<string>; width: number; fontSize: number; labels: boolean }) {
   const features = data.features.filter((feature) => selectedIds.has(feature.id));
   const cx = 400;
   const cy = 320;
@@ -222,19 +217,18 @@ function PlasmidMap({ data, selectedIds, width, labels }: { data: SequenceData; 
   return (
     <svg id="plasmid-map" xmlns="http://www.w3.org/2000/svg" width="800" height="640" viewBox="0 0 800 640" role="img" aria-label={`${data.name} plasmid map`} className="h-full w-full overflow-visible" preserveAspectRatio="xMidYMid meet" shapeRendering="geometricPrecision">
       <title>{`${data.name} · simplified plasmid map`}</title>
-      <circle cx={cx} cy={cy} r={baseRadius} fill="none" stroke="#6A6A6A" strokeWidth="10" />
+      <circle cx={cx} cy={cy} r={baseRadius} fill="none" stroke="#202020" strokeWidth="4" />
       {features.map((feature, index) => {
         const color = isPromoter(feature) ? PROMOTER_COLOR : normalizeColor(feature.color, TYPE_COLORS[feature.type ?? ''] ?? FEATURE_COLORS[index % FEATURE_COLORS.length]);
         const span = normalizedSpan(feature.start, feature.end, data.size);
         const midAngle = -Math.PI / 2 + ((feature.start + span / 2) / data.size) * Math.PI * 2;
         // 参考论文风格：上半环标签放环内侧，下半环放环外侧，直接文字标注、无引线框
-        const labelRadius = Math.sin(midAngle) < 0 ? baseRadius - width / 2 - 18 : baseRadius + width / 2 + 18;
+        const labelRadius = baseRadius + Math.max(36, width + 20);
         const labelPoint = polar(cx, cy, labelRadius, midAngle);
         const label = clampName(displayName(feature), 26);
         return <g key={feature.id} data-feature-name={feature.name}>
-          <path d={featurePath(feature, data.size, baseRadius, width, cx, cy)} fill={color} stroke="#3C3C3C" strokeWidth="1" strokeLinejoin="miter" />
-          {isPromoter(feature) && <path d={promoterArrowPath(feature, data.size, baseRadius, width, cx, cy)} fill={color} stroke="#3C3C3C" strokeWidth="1" strokeLinejoin="miter" />}
-          {labels && <text x={labelPoint.x.toFixed(2)} y={(labelPoint.y + 0.6).toFixed(2)} fill="#1F2937" fontFamily="Arial" fontSize="13" fontWeight="500" fontStyle={isPromoter(feature) ? 'italic' : 'normal'} textAnchor="middle" dominantBaseline="middle">{label}</text>}
+          <path d={featurePath(feature, data.size, baseRadius, width, cx, cy)} fill={color} stroke="#202020" strokeWidth="1.5" strokeLinejoin="round" />
+          {labels && <text x={labelPoint.x.toFixed(2)} y={(labelPoint.y + 0.6).toFixed(2)} fill="#1F2937" fontFamily="Arial" fontSize={fontSize} fontWeight="500" fontStyle={isPromoter(feature) ? 'italic' : 'normal'} textAnchor="middle" dominantBaseline="middle">{label}</text>}
         </g>;
       })}
       <text x={cx} y={cy + 1} fill="#111111" fontFamily="Arial" fontSize="20" fontWeight="700" textAnchor="middle" dominantBaseline="middle">{clampName(data.name, 34)}</text>
@@ -247,7 +241,8 @@ export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [data, setData] = useState<SequenceData | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bandWidth, setBandWidth] = useState(8);
+  const [bandWidth, setBandWidth] = useState(24);
+  const [fontSize, setFontSize] = useState(13);
   const [showLabels, setShowLabels] = useState(true);
   const [fileName, setFileName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -414,8 +409,8 @@ export default function Home() {
     </section> : <section className="mx-auto max-w-[1440px] px-5 py-6 sm:px-9">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold tracking-[0.12em] text-[#478078]">WORKSPACE</p><div className="mt-1 flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold tracking-[-0.035em]">{data.name}</h1><Badge variant="secondary" className="bg-[#E5EFEC] text-[#4D6B6A]">{data.size.toLocaleString()} bp</Badge><Badge variant="secondary" className="bg-[#E5EFEC] text-[#4D6B6A]">{displayedFeatures.length}/{data.features.length} features</Badge></div><p className="mt-1 text-xs text-[#79908F]">来源：{fileName}</p></div><div className="flex items-center gap-2"><Button variant="ghost" onClick={reset} className="text-[#587271]"><RotateCcw /> 换一个文件</Button><Button onClick={downloadSvg} className="h-9 bg-[#195B58] px-4 text-white hover:bg-[#124A48]"><Download /> 下载 SVG</Button></div></div>
       <div className="grid gap-5 xl:grid-cols-[290px_minmax(0,1fr)_285px]">
-        <aside className="order-2 rounded-2xl border border-[#DCE8E5] bg-white p-5 shadow-[0_10px_30px_rgba(35,74,68,0.05)] xl:order-1"><div className="flex items-center justify-between border-b border-[#E5EFEC] pb-4"><div><h2 className="font-bold">示意图设置</h2><p className="mt-0.5 text-xs text-[#728887]">先缩小，再调宽度</p></div><CircleHelp className="size-4 text-[#8AA09E]" aria-label="箭头环带宽度指 feature 色块沿半径方向的实际宽度" /></div><div className="mt-6"><div className="flex items-baseline justify-between"><label className="text-sm font-semibold">箭头粗细</label><output className="rounded-md bg-[#E7F4F0] px-2 py-0.5 text-xs font-bold text-[#277269]">{bandWidth}px</output></div><Slider className="mt-4" min={3} max={16} step={1} value={[bandWidth]} onValueChange={(value) => setBandWidth(Array.isArray(value) ? value[0] : value)} aria-label="箭头粗细" /><div className="mt-2 flex justify-between text-[11px] text-[#8A9D9B]"><span>细</span><span>标准</span><span>粗</span></div></div><div className="mt-6 flex items-center justify-between rounded-xl bg-[#F2F7F5] px-3.5 py-3"><div><p className="text-sm font-semibold">显示 feature 标签</p><p className="mt-0.5 text-xs text-[#728887]">直接文字标注，无引线框</p></div><Switch checked={showLabels} onCheckedChange={setShowLabels} aria-label="显示 feature 标签" /></div><div className="mt-7 rounded-xl border border-[#D7E8E3] bg-[#F4FAF8] p-3.5"><div className="flex gap-2"><Info className="mt-0.5 size-4 shrink-0 text-[#338175]" /><p className="text-xs leading-5 text-[#547573]">导出的 SVG 是重新生成的矢量图：箭头粗细由这里控制，不受 SnapGene 默认箭头比例限制。</p></div></div></aside>
-        <div className="order-1 min-h-[520px] rounded-2xl border border-[#DCE8E5] bg-[radial-gradient(circle_at_50%_42%,#FFFFFF_0%,#F7FBF9_70%,#EDF5F1_100%)] p-5 shadow-[0_10px_30px_rgba(35,74,68,0.05)] xl:order-2"><div className="mb-3 flex items-center justify-between"><p className="text-xs font-bold tracking-[0.1em] text-[#6D8885]">SVG PREVIEW</p><p className="text-xs text-[#78908D]">透明背景 · 可编辑</p></div><div className="mx-auto h-[min(68vh,680px)] min-h-[440px] max-w-[720px]"><PlasmidMap data={data} selectedIds={selectedIds} width={bandWidth} labels={showLabels} /></div></div>
+        <aside className="order-2 rounded-2xl border border-[#DCE8E5] bg-white p-5 shadow-[0_10px_30px_rgba(35,74,68,0.05)] xl:order-1"><div className="flex items-center justify-between border-b border-[#E5EFEC] pb-4"><div><h2 className="font-bold">示意图设置</h2><p className="mt-0.5 text-xs text-[#728887]">先缩小，再调宽度</p></div><CircleHelp className="size-4 text-[#8AA09E]" aria-label="箭头环带宽度指 feature 色块沿半径方向的实际宽度" /></div><div className="mt-6"><div className="flex items-baseline justify-between"><label className="text-sm font-semibold">箭头粗细</label><output className="rounded-md bg-[#E7F4F0] px-2 py-0.5 text-xs font-bold text-[#277269]">{bandWidth}px</output></div><Slider className="mt-4" min={8} max={48} step={1} value={[bandWidth]} onValueChange={(value) => setBandWidth(Array.isArray(value) ? value[0] : value)} aria-label="箭头粗细" /><div className="mt-2 flex justify-between text-[11px] text-[#8A9D9B]"><span>细</span><span>标准</span><span>粗</span></div></div><div className="mt-6 flex items-center justify-between rounded-xl bg-[#F2F7F5] px-3.5 py-3"><div><p className="text-sm font-semibold">显示 feature 标签</p><p className="mt-0.5 text-xs text-[#728887]">直接文字标注，无引线框</p></div><Switch checked={showLabels} onCheckedChange={setShowLabels} aria-label="显示 feature 标签" /></div><div className="mt-7 rounded-xl border border-[#D7E8E3] bg-[#F4FAF8] p-3.5"><div className="flex gap-2"><Info className="mt-0.5 size-4 shrink-0 text-[#338175]" /><p className="text-xs leading-5 text-[#547573]">导出的 SVG 是重新生成的矢量图：箭头粗细由这里控制，不受 SnapGene 默认箭头比例限制。</p></div></div></aside>
+        <div className="order-1 min-h-[520px] rounded-2xl border border-[#DCE8E5] bg-[radial-gradient(circle_at_50%_42%,#FFFFFF_0%,#F7FBF9_70%,#EDF5F1_100%)] p-5 shadow-[0_10px_30px_rgba(35,74,68,0.05)] xl:order-2"><div className="mb-3 flex items-center justify-between"><p className="text-xs font-bold tracking-[0.1em] text-[#6D8885]">SVG PREVIEW</p><p className="text-xs text-[#78908D]">透明背景 · 可编辑</p></div><div className="mx-auto h-[min(68vh,680px)] min-h-[440px] max-w-[720px]"><div className="mb-3 flex items-center gap-2"><label className="text-xs font-semibold">字体</label><input type="range" min="8" max="24" value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))} /></div><PlasmidMap data={data} selectedIds={selectedIds} width={bandWidth} fontSize={fontSize} labels={showLabels} /></div></div>
         <aside className="order-3 rounded-2xl border border-[#DCE8E5] bg-white p-5 shadow-[0_10px_30px_rgba(35,74,68,0.05)]"><div className="flex items-end justify-between border-b border-[#E5EFEC] pb-4"><div><h2 className="font-bold">保留的元件</h2><p className="mt-0.5 text-xs text-[#728887]">点击精简图谱</p></div><button type="button" className="text-xs font-semibold text-[#28776D]" onClick={() => setSelectedIds(new Set(data.features.map((feature) => feature.id)))}>全部显示</button></div><div className="mt-2 max-h-[430px] space-y-1 overflow-y-auto pr-1">{data.features.map((feature, index) => { const active = selectedIds.has(feature.id); const color = isPromoter(feature) ? PROMOTER_COLOR : normalizeColor(feature.color, TYPE_COLORS[feature.type ?? ''] ?? FEATURE_COLORS[index % FEATURE_COLORS.length]); return <button key={feature.id} type="button" onClick={() => toggleFeature(feature.id)} className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition ${active ? 'bg-[#F0F8F5]' : 'opacity-45 hover:bg-[#F6F8F7]'}`} aria-pressed={active}><span className="size-3 shrink-0 rounded-sm" style={{ background: color }} /><span className="min-w-0 flex-1 truncate text-sm font-medium">{feature.name}</span>{active ? <span className="text-xs font-bold text-[#278171]">保留</span> : <X className="size-3.5 text-[#829795]" />}</button>; })}</div><p className="mt-4 border-t border-[#E5EFEC] pt-4 text-xs leading-5 text-[#78908D]">建议小尺寸主图保留 4–8 个核心 feature；完整构建信息可放在补充材料。</p></aside>
       </div>
     </section>}
