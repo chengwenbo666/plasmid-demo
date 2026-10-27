@@ -2,6 +2,7 @@
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR" || exit 1
+rm -f .vinext/dev/lock.json
 
 if ! command -v node >/dev/null 2>&1; then
   echo "没有找到 Node.js。请先安装 Node.js 22 或更高版本。"
@@ -17,7 +18,10 @@ fi
 echo "正在启动质粒图谱网站..."
 npm run dev &
 SERVER_PID=$!
-sleep 3
+for i in {1..20}; do
+  if curl -fsS http://localhost:3000 >/dev/null 2>&1; then break; fi
+  sleep 1
+done
 open "http://localhost:3000"
 
 echo "网站已打开。关闭此窗口会停止网站。"
