@@ -11,6 +11,7 @@ for (const match of [...html.matchAll(/<link[^>]*href="([^"]+\.css)"[^>]*>/g)]) 
   const css = await readFile(`dist/${match[1].replace(/^\.\//, '')}`, 'utf8');
   html = html.replace(match[0], () => `<style>${css}</style>`);
 }
+html = html.replace(/<\/title>\s+/, '</title>');
 await writeFile('质粒图谱.html', html);
 await writeFile('Plasmid-Demo.html', html);
 console.log('Created 质粒图谱.html — double-click to open, no Node.js required.');
