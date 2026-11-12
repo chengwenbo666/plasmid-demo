@@ -1,78 +1,38 @@
-# Plasmid Demo：质粒图谱生成器
+# 质粒图谱 · Plasmid Demo
 
-这是一个给实验人员使用的质粒图谱小工具：上传 SnapGene 导出的 `.dna` 文件，就可以生成带方向箭头、feature 名称和长度信息的环形质粒图，并导出 SVG 矢量图。
+上传 SnapGene `.dna` 文件，筛选元件、调整箭头粗细和字体，导出可编辑的 SVG 矢量图。文件在浏览器本地处理。
 
-> **Windows 用户：** 下载项目后，优先双击根目录里的 `start-plasmid-demo.bat` 即可运行。如果打不开，请先安装 Node.js 22 或更高版本。
->
-> **Mac 用户：** 双击根目录里的 `启动质粒图谱.command` 即可运行。
+## 直接使用（Mac / Windows）
 
-## 最简单的使用方法（Mac）
+1. 下载项目 ZIP 并**完整解压**。
+2. 双击 **`质粒图谱.html`**，用 Chrome、Edge 或 Safari 打开。
+3. 上传 `.dna`，或先点击示例按钮，再下载 SVG。
 
-不需要会写代码，也不需要会用 Git。
+**不用安装 Node.js，不用联网，不用启动服务器。** 可把这个 HTML 单独复制到桌面、U 盘或其他电脑；代码与样式已全部包含在文件中。
 
-### 第一次使用
+Windows 也可双击 `start-plasmid-demo.bat`（或 `启动质粒图谱.bat`）。英文名 `Plasmid-Demo.html` 是同一便携版本，供 Windows 启动器使用，以避开命令行编码差异。不要在压缩包预览里直接运行。若 HTML 被其他程序关联，用右键 → 打开方式 → Chrome / Edge。
 
-1. 在 GitHub 页面点击绿色的 **Code** 按钮。
-2. 选择 **Download ZIP**，下载项目压缩包。
-3. 双击下载的压缩包解压。
-4. 打开解压后的 `plasmid-demo` 文件夹。
-5. 双击里面的 `启动质粒图谱.command`。
-6. 如果 Mac 提示无法打开，右键这个文件，选择 **打开**，再确认一次。
+Mac 也可双击 `启动质粒图谱.command`。把 HTML 的替身或应用入口放到桌面 / Dock，以后即可直接打开。
 
-第一次启动会自动安装依赖，可能需要等待几十秒。随后浏览器会自动打开质粒图谱页面。
+## 开发和更新便携版本
 
-### 以后使用
-
-以后只需要打开 `plasmid-demo` 文件夹，双击 `启动质粒图谱.command` 即可。使用完以后，关闭启动脚本打开的终端窗口，网站就会停止运行。
-
-## Windows 使用方法
-
-1. 在 GitHub 页面点击 **Code → Download ZIP**。
-2. 解压后打开 `plasmid-demo` 文件夹。
-3. 双击 `启动质粒图谱.bat`。
-4. 等待浏览器打开 `http://localhost:3000`。
-
-第一次运行会自动安装依赖。使用完后关闭弹出的命令提示符窗口即可停止网站。
-
-## 生成一张质粒图
-
-1. 点击上传区域，选择 SnapGene 导出的 `.dna` 文件。
-2. 在右侧列表中点击 feature，决定哪些元件保留在图上。
-3. 用“箭头粗细”滑块调整彩色 feature 的宽度。
-4. 用“字体”滑块调整外侧标签大小。
-5. 点击“下载 SVG”，保存可编辑的矢量图。
-
-导出的 SVG 可以继续用 Illustrator、Inkscape 或 PowerPoint 编辑。
-
-## 支持什么文件
-
-支持 SnapGene 导出的 `.dna` 文件。程序会读取质粒名称、序列长度、环状或线性属性、feature 名称、位置、方向和颜色。文件在浏览器本地读取和处理，不会上传到服务器。
-
-## 如果双击后没有打开网页
-
-先关闭之前打开的启动终端窗口，再重新双击 `启动质粒图谱.command`。
-
-如果仍然打不开：
-
-1. 打开“终端”应用。
-2. 把 `plasmid-demo` 文件夹拖进终端窗口，得到文件夹路径。
-3. 输入下面两行命令，每行输入后按回车：
+安装符合 package.json engines 的 Node.js 后运行：
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-4. 终端出现 `http://localhost:3000` 后，在浏览器打开这个地址。
-
-如果提示没有找到 `node`，先从 [Node.js 官网](https://nodejs.org/) 安装 Node.js 22 或更高版本，然后重新运行启动文件。
-
-## 给熟悉开发的人
+重新生成便携 HTML：
 
 ```bash
-npm install
-npm run dev
+npm run build
 ```
 
-项目使用 React、Vite/Vinext 和 SnapGene bio-parser。主要文件是 `app/page.tsx`，启动脚本是 `启动质粒图谱.command`。
+绘图代码：`app/page.tsx`；入口：`main.tsx`；打包脚本：`scripts/build-portable.mjs`。
 
+浏览器界面不依赖 Cloudflare、开发服务器或在线字体。旧版 Windows 启动器依赖 Node.js、首次联网安装依赖和固定等待时间；现已改为直接打开便携 HTML。
+
+## 验证范围
+
+便携版需验证本地 file:// 打开、真实 SnapGene 文件解析、示例操作和 SVG 下载。Windows 实机兼容性仍需在 Windows 上复核；Mac 上通过浏览器验证不能替代 Windows 实机测试。
